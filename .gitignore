@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+hostick.db
+static/uploads/food_complaints/*
+!static/uploads/food_complaints/.gitkeep

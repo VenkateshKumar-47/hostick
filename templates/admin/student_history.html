@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }} History — Hostick Admin{% endblock %}
+{% block page_heading %}Student Outing &amp; Ticket History{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.manage_students') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Students
+    </a>
+</div>
+
+<!-- Student Summary Card -->
+<div class="card-clean p-4 mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h5 class="fw-bold text-navy mb-1">
+                {{ student.full_name }}
+                <span class="badge bg-light text-navy border ms-2">{{ student.register_number }}</span>
+            </h5>
+            <div class="small text-muted">
+                {{ student.department }} (Year {{ student.year_of_study }}) &bull;
+                {{ student.hostel.name }}, Room {{ student.room.room_number }} &bull;
+                Phone: {{ student.phone }}
+                {% if student.parent_phone %} &bull; Parent: {{ student.parent_phone }}{% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary me-1">
+                {{ tickets|length }} Outing Tickets
+            </span>
+            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">
+                {{ student.maintenance_tickets|length }} Maintenance
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Outing Ticket History -->
+<div class="card-clean p-4">
+    <h6 class="fw-bold text-navy mb-3"><i class="bi bi-ticket-detailed me-2"></i>Complete Outing Ticket History</h6>
+
+    {% if tickets %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Destination &amp; Reason</th>
+                        <th>Departure</th>
+                        <th>Expected Return</th>
+                        <th>Status</th>
+                        <th>Reviewed By / Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                        <tr>
+                            <td class="fw-bold text-navy">{{ t.ticket_code }}</td>
+                            <td>
+                                <div class="fw-semibold small">{{ t.destination }}</div>
+                                <small class="text-muted">{{ t.reason }}</small>
+                            </td>
+                            <td class="small">{{ t.departure_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td class="small">{{ t.expected_return_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td>
+                                {% if t.status == 'Pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif t.status == 'Approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif t.status == 'Rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% elif t.status == 'Completed' %}
+                                    <span class="badge bg-info text-dark">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if t.status == 'Rejected' and t.rejection_reason %}
+                                    <span class="text-danger">{{ t.rejection_reason }}</span>
+                                {% elif t.reviewer %}
+                                    {{ t.reviewer.full_name }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            <p class="mb-0">This student has not generated any outing tickets yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

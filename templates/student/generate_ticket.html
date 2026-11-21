@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Generate Outing Ticket — Hostick{% endblock %}
+{% block page_heading %}Generate Outing Ticket{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card-clean p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold text-navy mb-0">Hostel Outing Pass Request</h5>
+                    <small class="text-muted">Your student profile details are auto-filled below.</small>
+                </div>
+                <span class="badge bg-light text-navy border">Status on Submit: Pending</span>
+            </div>
+
+            <form method="POST" action="{{ url_for('student.generate_ticket') }}" id="generateTicketForm">
+                <!-- Auto-populated Read-only Student Info -->
+                <div class="bg-light rounded p-3 mb-4 border">
+                    <div class="row g-3 small">
+                        <div class="col-md-4">
+                            <label class="text-muted d-block">Student Name</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="{{ student.full_name }}" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted d-block">Register Number</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="{{ student.register_number }}" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="text-muted d-block">Department &amp; Year</label>
+                            <input type="text" class="form-control form-control-sm bg-white"
+                                   value="{{ student.department }} (Year {{ student.year_of_study }})" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block">Hostel Name</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="{{ student.hostel.name }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-muted d-block">Room Number</label>
+                            <input type="text" class="form-control form-control-sm bg-white" value="{{ student.room.room_number }}" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editable Outing Fields -->
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label for="destination" class="form-label fw-semibold small">Destination *</label>
+                        <input type="text" class="form-control" id="destination" name="destination"
+                               placeholder="e.g. Coimbatore Railway Station / Home" required>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="parent_contact" class="form-label fw-semibold small">Parent / Guardian Contact (Optional)</label>
+                        <input type="tel" class="form-control" id="parent_contact" name="parent_contact"
+                               value="{{ student.parent_phone or '' }}" placeholder="e.g. 9876543210">
+                    </div>
+
+                    <div class="col-12">
+                        <label for="reason" class="form-label fw-semibold small">Reason for Leaving *</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3"
+                                  placeholder="Clearly state the reason for leaving the hostel..." required></textarea>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="departure_date" class="form-label fw-semibold small">Departure Date *</label>
+                        <input type="date" class="form-control" id="departure_date" name="departure_date" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="departure_time" class="form-label fw-semibold small">Departure Time *</label>
+                        <input type="time" class="form-control" id="departure_time" name="departure_time" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="return_date" class="form-label fw-semibold small">Expected Return Date *</label>
+                        <input type="date" class="form-control" id="return_date" name="return_date" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="return_time" class="form-label fw-semibold small">Expected Return Time *</label>
+                        <input type="time" class="form-control" id="return_time" name="return_time" required>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-navy px-4 fw-semibold">
+                        <i class="bi bi-send-check me-2"></i>Submit Ticket Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

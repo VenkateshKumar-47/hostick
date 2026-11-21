@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Food &amp; Mess Complaints — Hostick Admin{% endblock %}
+{% block page_heading %}Hostel Food &amp; Mess Complaints{% endblock %}
+
+{% block content %}
+<!-- Top Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Critical Hygiene Alerts</div>
+                <div class="stat-value text-danger">{{ counts.critical_open }}</div>
+            </div>
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Boys Mess (Open)</div>
+                <div class="stat-value text-primary">{{ counts.boys_open }}</div>
+            </div>
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                <i class="bi bi-building"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Girls Mess (Open)</div>
+                <div class="stat-value text-danger">{{ counts.girls_open }}</div>
+            </div>
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                <i class="bi bi-building-fill"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Resolved Complaints</div>
+                <div class="stat-value text-success">{{ counts.resolved }}</div>
+            </div>
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters (Split by Boys Mess / Girls Mess) -->
+<div class="card-clean p-3 mb-4">
+    <form method="GET" action="{{ url_for('admin.manage_food_complaints') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Hostel Mess</label>
+            <select name="mess" class="form-select form-select-sm">
+                <option value="All" {% if mess_filter == 'All' %}selected{% endif %}>All Messes (Boys &amp; Girls)</option>
+                <option value="Boys Hostel Mess" {% if mess_filter == 'Boys Hostel Mess' %}selected{% endif %}>Boys Hostel Mess</option>
+                <option value="Girls Hostel Mess" {% if mess_filter == 'Girls Hostel Mess' %}selected{% endif %}>Girls Hostel Mess</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Priority</label>
+            <select name="priority" class="form-select form-select-sm">
+                {% for p in ['All', 'Critical', 'High', 'Medium', 'Low'] %}
+                    <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+            <select name="status" class="form-select form-select-sm">
+                {% for st in ['All', 'Reported', 'Under Inspection', 'Action Taken', 'Resolved'] %}
+                    <option value="{{ st }}" {% if status_filter == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-navy btn-sm w-100">Apply Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Complaints List (Critical First) -->
+<div class="card-clean p-4">
+    <h6 class="fw-bold text-navy mb-3">
+        <i class="bi bi-cup-hot-fill me-2"></i>Food Complaints Queue (Urgent &amp; Photo-Backed Issues First)
+    </h6>
+
+    {% if complaints %}
+        <div class="d-flex flex-column gap-3">
+            {% for c in complaints %}
+                <div class="border rounded-3 p-3 {% if c.priority == 'Critical' and c.status != 'Resolved' %}border-danger bg-danger bg-opacity-10{% else %}bg-white{% endif %}">
+                    <div class="row g-3 align-items-start">
+                        <div class="col-lg-7">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <span class="fw-bold text-navy">{{ c.complaint_code }}</span>
+                                <span class="badge {% if c.mess_name == 'Boys Hostel Mess' %}bg-primary{% else %}bg-danger{% endif %}">
+                                    {{ c.mess_name }}
+                                </span>
+                                <span class="badge bg-light text-dark border">{{ c.meal_type }}</span>
+                                {% if c.priority == 'Critical' %}
+                                    <span class="badge bg-danger">CRITICAL</span>
+                                {% elif c.priority == 'High' %}
+                                    <span class="badge bg-warning text-dark">HIGH</span>
+                                {% elif c.priority == 'Medium' %}
+                                    <span class="badge bg-info text-dark">MEDIUM</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">LOW</span>
+                                {% endif %}
+                                <span class="badge bg-dark">{{ c.status }}</span>
+                            </div>
+
+                            <div class="fw-semibold text-navy small mb-1">{{ c.issue_type }}</div>
+                            <p class="small mb-2 text-dark">{{ c.description }}</p>
+
+                            <div class="small text-muted">
+                                <i class="bi bi-person me-1"></i>{{ c.student.full_name }} ({{ c.student.register_number }}) &bull;
+                                {{ c.student.hostel.name }}, Room {{ c.student.room.room_number }} &bull;
+                                {{ c.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <i class="bi bi-cpu me-1"></i><em>{{ c.triage_reason }}</em>
+                            </div>
+
+                            {% if c.photo_filename %}
+                                <div class="mt-2">
+                                    <a href="{{ url_for('static', filename='uploads/food_complaints/' ~ c.photo_filename) }}"
+                                       target="_blank" class="d-inline-flex align-items-center gap-2 text-decoration-none">
+                                        <img src="{{ url_for('static', filename='uploads/food_complaints/' ~ c.photo_filename) }}"
+                                             alt="Evidence" class="img-thumbnail"
+                                             style="height: 85px; width: 110px; object-fit: cover;">
+                                        <span class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-image me-1"></i>Inspect Full Photo
+                                        </span>
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Warden Action Update Form -->
+                        <div class="col-lg-5">
+                            <form method="POST" action="{{ url_for('admin.update_food_complaint', complaint_id=c.id) }}"
+                                  class="bg-white border rounded p-3">
+                                <div class="small fw-bold text-navy mb-2">Post Warden Action / Update</div>
+                                <div class="mb-2">
+                                    <select name="status" class="form-select form-select-sm" required>
+                                        {% for st in ['Reported', 'Under Inspection', 'Action Taken', 'Resolved'] %}
+                                            <option value="{{ st }}" {% if c.status == st %}selected{% endif %}>{{ st }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <textarea name="warden_remark" rows="2" class="form-control form-control-sm"
+                                              placeholder="e.g. Inspected kitchen, discarded spoiled batch, issued warning to mess contractor...">{{ c.warden_remark or '' }}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-navy btn-sm w-100">
+                                    <i class="bi bi-check2-circle me-1"></i>Save &amp; Notify Student
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-emoji-smile fs-1 d-block mb-2"></i>
+            <p class="mb-0">No food complaints match the selected filter.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

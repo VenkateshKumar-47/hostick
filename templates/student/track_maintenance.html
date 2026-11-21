@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Live Tracking {{ ticket.ticket_code }} — Hostick{% endblock %}
+{% block page_heading %}Live Maintenance Tracker{% endblock %}
+
+{% block content %}
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('student.maintenance') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Maintenance
+    </a>
+    <div class="d-flex align-items-center gap-2 small text-muted">
+        <span class="badge bg-success bg-opacity-10 text-success border border-success">
+            <i class="bi bi-broadcast me-1"></i>Live Sync On
+        </span>
+        <span id="lastSyncedText">Synced just now</span>
+        <button class="btn btn-sm btn-light border" id="manualRefreshBtn" type="button">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Ticket Header & Progress Stepper -->
+<div class="card-clean p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h4 class="fw-bold text-navy mb-0">{{ ticket.ticket_code }}</h4>
+                <span id="livePriorityBadge" class="badge {% if ticket.priority == 'Critical' %}bg-danger{% elif ticket.priority == 'High' %}bg-warning text-dark{% elif ticket.priority == 'Medium' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                    {{ ticket.priority }} Priority
+                </span>
+                <span class="badge bg-light text-navy border">{{ ticket.category }}</span>
+                <span id="liveReportCount" class="badge bg-primary bg-opacity-10 text-primary border border-primary">
+                    {{ ticket.report_count }} Report{{ 's' if ticket.report_count != 1 else '' }}
+                </span>
+            </div>
+            <p class="text-muted small mb-0 mt-1">
+                {{ ticket.hostel.name }} — Room {{ ticket.room.room_number }} &bull; Assigned Team: <strong id="liveTeam">{{ ticket.assigned_team }}</strong>
+            </p>
+        </div>
+        <span id="liveStatusBadge" class="badge fs-6 px-3 py-2 {% if ticket.status == 'Resolved' %}bg-success{% elif ticket.status == 'In Progress' %}bg-primary{% elif ticket.status == 'Assigned' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+            {{ ticket.status }}
+        </span>
+    </div>
+
+    <!-- 4-Step Progress Tracker -->
+    {% set stages = ['Reported', 'Assigned', 'In Progress', 'Resolved'] %}
+    {% set current_idx = stages.index(ticket.status) if ticket.status in stages else 0 %}
+    <div class="row g-2 text-center mb-3" id="liveStepper">
+        {% for stage in stages %}
+            {% set is_done = loop.index0 <= current_idx %}
+            <div class="col-6 col-md-3">
+                <div class="p-2 rounded border stepper-box {% if is_done %}bg-navy text-white border-0{% else %}bg-light text-muted{% endif %}"
+                     data-stage-index="{{ loop.index0 }}">
+                    <div class="small fw-semibold">{{ loop.index }}. {{ stage }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Latest Warden Remark Highlight -->
+    <div class="alert alert-light border mb-0 d-flex align-items-start gap-2">
+        <i class="bi bi-megaphone-fill text-primary fs-5 mt-1"></i>
+        <div>
+            <div class="small fw-bold text-navy">Latest Warden Update</div>
+            <div id="liveWardenRemark" class="small">
+                {{ ticket.warden_remark or 'Complaint logged and queued for warden review.' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Auto-Triage Analysis -->
+    <div class="col-lg-5">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3"><i class="bi bi-cpu me-2"></i>Auto-Triage Analysis</h6>
+            <dl class="row small mb-0">
+                <dt class="col-5 text-muted">Original Report</dt>
+                <dd class="col-7">{{ ticket.description }}</dd>
+
+                <dt class="col-5 text-muted">Detected Keywords</dt>
+                <dd class="col-7"><span class="badge bg-light text-dark border">{{ ticket.matched_keywords }}</span></dd>
+
+                <dt class="col-5 text-muted">Safety Rule Applied</dt>
+                <dd class="col-7 text-navy fw-medium">{{ ticket.triage_reason }}</dd>
+
+                <dt class="col-5 text-muted">Assigned Team</dt>
+                <dd class="col-7 fw-semibold">{{ ticket.assigned_team }}</dd>
+
+                <dt class="col-5 text-muted">Reported On</dt>
+                <dd class="col-7">{{ ticket.created_at.strftime('%d %b %Y, %I:%M %p') }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Live Activity & Warden Updates Timeline -->
+    <div class="col-lg-7">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3"><i class="bi bi-clock-history me-2"></i>Live Update Timeline</h6>
+            <div id="liveTimeline" class="list-group list-group-flush">
+                {% for u in ticket.updates %}
+                    <div class="list-group-item px-0 py-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <span class="fw-semibold small text-navy">{{ u.updated_by_name }}</span>
+                                <span class="badge {% if u.updated_by_role == 'Warden' %}bg-primary{% elif u.updated_by_role == 'System' %}bg-dark{% else %}bg-secondary{% endif %} ms-1" style="font-size: 0.7rem;">
+                                    {{ u.updated_by_role }}
+                                </span>
+                                <span class="badge bg-light text-dark border ms-1" style="font-size: 0.7rem;">{{ u.status_snapshot }}</span>
+                            </div>
+                            <small class="text-muted">{{ u.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                        </div>
+                        <div class="small text-dark">{{ u.message }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    const apiUrl = "{{ url_for('student.maintenance_live_api', ticket_id=ticket.id) }}";
+    const stages = ["Reported", "Assigned", "In Progress", "Resolved"];
+
+    function badgeClassForStatus(status) {
+        if (status === "Resolved") return "bg-success";
+        if (status === "In Progress") return "bg-primary";
+        if (status === "Assigned") return "bg-info text-dark";
+        return "bg-secondary";
+    }
+
+    function badgeClassForPriority(priority) {
+        if (priority === "Critical") return "bg-danger";
+        if (priority === "High") return "bg-warning text-dark";
+        if (priority === "Medium") return "bg-info text-dark";
+        return "bg-secondary";
+    }
+
+    function syncLiveStatus() {
+        fetch(apiUrl)
+            .then((r) => r.json())
+            .then((data) => {
+                if (data.error) return;
+
+                const statusBadge = document.getElementById("liveStatusBadge");
+                statusBadge.className = "badge fs-6 px-3 py-2 " + badgeClassForStatus(data.status);
+                statusBadge.textContent = data.status;
+
+                const prioBadge = document.getElementById("livePriorityBadge");
+                prioBadge.className = "badge " + badgeClassForPriority(data.priority);
+                prioBadge.textContent = data.priority + " Priority";
+
+                document.getElementById("liveTeam").textContent = data.assigned_team;
+                document.getElementById("liveReportCount").textContent =
+                    data.report_count + (data.report_count === 1 ? " Report" : " Reports");
+                document.getElementById("liveWardenRemark").textContent = data.warden_remark;
+
+                // Update 4-step progress bar
+                const currentIdx = Math.max(0, stages.indexOf(data.status));
+                document.querySelectorAll(".stepper-box").forEach((box) => {
+                    const idx = parseInt(box.getAttribute("data-stage-index"), 10);
+                    if (idx <= currentIdx) {
+                        box.className = "p-2 rounded border stepper-box bg-navy text-white border-0";
+                    } else {
+                        box.className = "p-2 rounded border stepper-box bg-light text-muted";
+                    }
+                });
+
+                // Update timeline
+                const timeline = document.getElementById("liveTimeline");
+                timeline.innerHTML = "";
+                data.updates.forEach((u) => {
+                    const roleClass = u.role === "Warden" ? "bg-primary" : u.role === "System" ? "bg-dark" : "bg-secondary";
+                    const item = document.createElement("div");
+                    item.className = "list-group-item px-0 py-3";
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <span class="fw-semibold small text-navy">${u.by}</span>
+                                <span class="badge ${roleClass} ms-1" style="font-size:0.7rem;">${u.role}</span>
+                                <span class="badge bg-light text-dark border ms-1" style="font-size:0.7rem;">${u.status}</span>
+                            </div>
+                            <small class="text-muted">${u.time}</small>
+                        </div>
+                        <div class="small text-dark">${u.message}</div>
+                    `;
+                    timeline.appendChild(item);
+                });
+
+                document.getElementById("lastSyncedText").textContent =
+                    "Synced at " + new Date().toLocaleTimeString();
+            })
+            .catch(() => {});
+    }
+
+    document.getElementById("manualRefreshBtn").addEventListener("click", syncLiveStatus);
+    setInterval(syncLiveStatus, 8000);
+})();
+</script>
+{% endblock %}

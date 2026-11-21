@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Maintenance Complaints — Hostick{% endblock %}
+{% block page_heading %}Maintenance Complaints &amp; Live Tracking{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Complaint Submission Form -->
+    <div class="col-lg-5">
+        <div class="card-clean p-4">
+            <h5 class="fw-bold text-navy mb-1">
+                <i class="bi bi-tools me-2"></i>Report a Maintenance Issue
+            </h5>
+            <p class="small text-muted mb-3">
+                Write the problem in your own words. Hostick automatically detects the category, checks safety priority rules, merges duplicate room reports, and assigns the right team.
+            </p>
+
+            <form method="POST" action="{{ url_for('student.maintenance') }}">
+                <div class="bg-light rounded p-2 px-3 mb-3 border small d-flex justify-content-between">
+                    <span><strong>Location:</strong> {{ student.hostel.name }}</span>
+                    <span><strong>Room:</strong> {{ student.room.room_number }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label small fw-semibold">Describe the Problem *</label>
+                    <textarea name="description" id="description" rows="4" class="form-control" required
+                              placeholder="Example: The switchboard near my bed is sparking and smells like burning plastic..."></textarea>
+                    <div class="form-text small">
+                        Try words like <em>sparking switchboard</em> (Critical), <em>broken fan</em> (High), <em>leaking tap</em> (Medium), or <em>dirty corridor</em> (Low).
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-navy w-100 fw-semibold">
+                    <i class="bi bi-cpu me-2"></i>Auto-Classify &amp; Submit Complaint
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Room & Personal Maintenance Tickets -->
+    <div class="col-lg-7">
+        <div class="card-clean p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-navy mb-0">
+                    <i class="bi bi-broadcast me-2 text-primary"></i>Room {{ student.room.room_number }} Active &amp; Past Tickets
+                </h6>
+                <span class="badge bg-light text-navy border">{{ tickets|length }} Total</span>
+            </div>
+
+            {% if tickets %}
+                <div class="d-flex flex-column gap-3">
+                    {% for t in tickets %}
+                        <div class="border rounded-3 p-3 bg-white">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                <div>
+                                    <span class="fw-bold text-navy">{{ t.ticket_code }}</span>
+                                    <span class="badge bg-light text-dark border ms-1">{{ t.category }}</span>
+                                    {% if t.priority == 'Critical' %}
+                                        <span class="badge bg-danger ms-1">Critical</span>
+                                    {% elif t.priority == 'High' %}
+                                        <span class="badge bg-warning text-dark ms-1">High</span>
+                                    {% elif t.priority == 'Medium' %}
+                                        <span class="badge bg-info text-dark ms-1">Medium</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-1">Low</span>
+                                    {% endif %}
+                                    {% if t.report_count > 1 %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary ms-1">
+                                            {{ t.report_count }} Merged Reports
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <span class="badge {% if t.status == 'Resolved' %}bg-success{% elif t.status == 'In Progress' %}bg-primary{% elif t.status == 'Assigned' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ t.status }}
+                                </span>
+                            </div>
+
+                            <p class="small mb-2 text-dark">{{ t.description }}</p>
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top small">
+                                <div class="text-muted">
+                                    <i class="bi bi-people me-1"></i>{{ t.assigned_team }}
+                                    {% if t.warden_remark %}
+                                        <div class="text-navy mt-1">
+                                            <i class="bi bi-chat-left-text me-1"></i><strong>Warden:</strong> {{ t.warden_remark }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <a href="{{ url_for('student.track_maintenance', ticket_id=t.id) }}"
+                                   class="btn btn-sm btn-outline-primary fw-semibold">
+                                    <i class="bi bi-activity me-1"></i>Live Track
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-check2-circle fs-1 d-block mb-2"></i>
+                    <p class="mb-0">No maintenance complaints reported for your room yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

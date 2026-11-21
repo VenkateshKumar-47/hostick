@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Hostel Food Complaints — Hostick{% endblock %}
+{% block page_heading %}Hostel Food / Mess Complaints{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Submit Food Complaint Form -->
+    <div class="col-lg-5">
+        <div class="card-clean p-4">
+            <h5 class="fw-bold text-navy mb-1">
+                <i class="bi bi-cup-hot-fill me-2"></i>Report Mess Food Issue
+            </h5>
+            <p class="small text-muted mb-3">
+                Select your hostel mess, describe the food issue, and attach a photo if there are insects, foreign objects, or rotten/spoiled food.
+            </p>
+
+            <form method="POST" action="{{ url_for('student.food_complaints') }}" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Hostel Mess *</label>
+                    <select name="mess_name" class="form-select" required>
+                        <option value="Boys Hostel Mess" {% if default_mess == 'Boys Hostel Mess' %}selected{% endif %}>
+                            Boys Hostel Mess
+                        </option>
+                        <option value="Girls Hostel Mess" {% if default_mess == 'Girls Hostel Mess' %}selected{% endif %}>
+                            Girls Hostel Mess
+                        </option>
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-semibold">Meal *</label>
+                        <select name="meal_type" class="form-select" required>
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Lunch">Lunch</option>
+                            <option value="Snacks">Evening Snacks</option>
+                            <option value="Dinner">Dinner</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label small fw-semibold">Issue Type *</label>
+                        <select name="issue_type" class="form-select" required>
+                            <option value="Insects / Foreign Object">Insects / Foreign Object (Critical)</option>
+                            <option value="Rotten / Spoiled Food">Rotten / Spoiled Food (Critical)</option>
+                            <option value="Unhygienic / Kitchen Cleanliness">Unhygienic / Dirty Plates or Water</option>
+                            <option value="Food Quality / Undercooked">Undercooked / Poor Quality</option>
+                            <option value="Quantity / Serving Delay">Short Quantity / Late Serving</option>
+                            <option value="Other">Other Feedback</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Complaint Details *</label>
+                    <textarea name="description" rows="3" class="form-control" required
+                              placeholder="Mention the food item and exact issue (e.g., Found insect in sambar during lunch / Rotten rice smell)..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="foodPhotoInput" class="form-label small fw-semibold">
+                        <i class="bi bi-camera-fill me-1"></i>Attach Photo Evidence (Optional, Max 5 MB)
+                    </label>
+                    <input type="file" name="photo" id="foodPhotoInput" class="form-control"
+                           accept=".png,.jpg,.jpeg,.webp">
+                    <div class="form-text small">Recommended for insects, worms, fungus, or rotten food proof.</div>
+                    <div id="photoPreviewWrap" class="mt-2 d-none">
+                        <img id="photoPreviewImg" src="" alt="Preview"
+                             class="img-thumbnail" style="max-height: 160px; object-fit: cover;">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-navy w-100 fw-semibold">
+                    <i class="bi bi-send-exclamation me-2"></i>Submit Food Complaint
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Student's Food Complaints & Live Warden Status -->
+    <div class="col-lg-7">
+        <div class="card-clean p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-navy mb-0">
+                    <i class="bi bi-list-check me-2"></i>My Submitted Food Complaints
+                </h6>
+                <span class="badge bg-light text-navy border">{{ complaints|length }} Total</span>
+            </div>
+
+            {% if complaints %}
+                <div class="d-flex flex-column gap-3">
+                    {% for c in complaints %}
+                        <div class="border rounded-3 p-3 bg-white">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                <div>
+                                    <span class="fw-bold text-navy">{{ c.complaint_code }}</span>
+                                    <span class="badge {% if c.mess_name == 'Boys Hostel Mess' %}bg-primary bg-opacity-10 text-primary border border-primary{% else %}bg-danger bg-opacity-10 text-danger border border-danger{% endif %} ms-1">
+                                        {{ c.mess_name }}
+                                    </span>
+                                    <span class="badge bg-light text-dark border ms-1">{{ c.meal_type }}</span>
+                                    {% if c.priority == 'Critical' %}
+                                        <span class="badge bg-danger ms-1">Critical</span>
+                                    {% elif c.priority == 'High' %}
+                                        <span class="badge bg-warning text-dark ms-1">High</span>
+                                    {% elif c.priority == 'Medium' %}
+                                        <span class="badge bg-info text-dark ms-1">Medium</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-1">Low</span>
+                                    {% endif %}
+                                </div>
+
+                                <span class="badge {% if c.status == 'Resolved' %}bg-success{% elif c.status == 'Action Taken' %}bg-primary{% elif c.status == 'Under Inspection' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ c.status }}
+                                </span>
+                            </div>
+
+                            <div class="small fw-semibold text-navy mb-1">{{ c.issue_type }}</div>
+                            <p class="small text-dark mb-2">{{ c.description }}</p>
+
+                            {% if c.photo_filename %}
+                                <div class="mb-2">
+                                    <a href="{{ url_for('static', filename='uploads/food_complaints/' ~ c.photo_filename) }}"
+                                       target="_blank" class="d-inline-block text-decoration-none">
+                                        <img src="{{ url_for('static', filename='uploads/food_complaints/' ~ c.photo_filename) }}"
+                                             alt="Food Evidence" class="img-thumbnail"
+                                             style="max-height: 120px; object-fit: cover;">
+                                        <div class="small text-primary mt-1">
+                                            <i class="bi bi-zoom-in me-1"></i>View Full Photo Evidence
+                                        </div>
+                                    </a>
+                                </div>
+                            {% endif %}
+
+                            <div class="pt-2 border-top small d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    {% if c.warden_remark %}
+                                        <span class="text-navy">
+                                            <i class="bi bi-shield-check me-1 text-primary"></i><strong>Warden Update:</strong> {{ c.warden_remark }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">Awaiting mess inspection by warden.</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ c.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-cup-hot fs-1 d-block mb-2"></i>
+                    <p class="mb-0">You have not filed any hostel food complaints yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const input = document.getElementById("foodPhotoInput");
+    const wrap = document.getElementById("photoPreviewWrap");
+    const img = document.getElementById("photoPreviewImg");
+
+    if (input && wrap && img) {
+        input.addEventListener("change", function () {
+            const file = this.files[0];
+            if (!file) {
+                wrap.classList.add("d-none");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                img.src = e.target.result;
+                wrap.classList.remove("d-none");
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+});
+</script>
+{% endblock %}

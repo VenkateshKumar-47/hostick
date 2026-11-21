@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Urgent Maintenance Queue — Hostick Admin{% endblock %}
+{% block page_heading %}Priority Maintenance Queue (Auto-Triaged){% endblock %}
+
+{% block content %}
+<!-- Maintenance Priority Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Critical Hazards (Open)</div>
+                <div class="stat-value text-danger">{{ counts.critical }}</div>
+            </div>
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                <i class="bi bi-lightning-charge-fill"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">High Priority (Open)</div>
+                <div class="stat-value text-warning">{{ counts.high }}</div>
+            </div>
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Total Active Tickets</div>
+                <div class="stat-value text-primary">{{ counts.open }}</div>
+            </div>
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                <i class="bi bi-tools"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Resolved Tickets</div>
+                <div class="stat-value text-success">{{ counts.resolved }}</div>
+            </div>
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card-clean p-3 mb-4">
+    <form method="GET" action="{{ url_for('admin.manage_maintenance') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Complaints</label>
+            <input type="text" name="q" value="{{ search_q }}" class="form-control form-control-sm"
+                   placeholder="Ticket ID, student, keyword, or team">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Priority</label>
+            <select name="priority" class="form-select form-select-sm">
+                {% for p in ['All', 'Critical', 'High', 'Medium', 'Low'] %}
+                    <option value="{{ p }}" {% if priority_filter == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Category</label>
+            <select name="category" class="form-select form-select-sm">
+                {% for c in ['All', 'Electrical', 'Plumbing', 'Carpentry & Furniture', 'Housekeeping & Sanitation', 'Internet & IT', 'General Maintenance'] %}
+                    <option value="{{ c }}" {% if category_filter == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+            <select name="status" class="form-select form-select-sm">
+                {% for st in ['All', 'Reported', 'Assigned', 'In Progress', 'Resolved'] %}
+                    <option value="{{ st }}" {% if status_filter == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-navy btn-sm flex-fill">Filter</button>
+            <a href="{{ url_for('admin.manage_maintenance') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Priority-Sorted Queue -->
+<div class="card-clean p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h6 class="fw-bold text-navy mb-0">
+                <i class="bi bi-sort-up me-2"></i>Unified Maintenance Queue — Urgent Work Ranked First
+            </h6>
+            <small class="text-muted">Sorted automatically by Safety Priority &rarr; Duplicate Report Count &rarr; Wait Time. Posting an update syncs live to the student's tracker.</small>
+        </div>
+    </div>
+
+    {% if tickets %}
+        <div class="d-flex flex-column gap-3">
+            {% for t in tickets %}
+                <div class="border rounded-3 p-3 {% if t.priority == 'Critical' and t.status != 'Resolved' %}border-danger bg-danger bg-opacity-10{% elif t.priority == 'High' and t.status != 'Resolved' %}border-warning bg-warning bg-opacity-10{% else %}bg-white{% endif %}">
+                    <div class="row g-3 align-items-start">
+                        <!-- Complaint & Triage Info -->
+                        <div class="col-lg-7">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <span class="fw-bold text-navy">{{ t.ticket_code }}</span>
+                                {% if t.priority == 'Critical' %}
+                                    <span class="badge bg-danger">CRITICAL</span>
+                                {% elif t.priority == 'High' %}
+                                    <span class="badge bg-warning text-dark">HIGH</span>
+                                {% elif t.priority == 'Medium' %}
+                                    <span class="badge bg-info text-dark">MEDIUM</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">LOW</span>
+                                {% endif %}
+                                <span class="badge bg-light text-navy border">{{ t.category }}</span>
+                                {% if t.report_count > 1 %}
+                                    <span class="badge bg-primary">
+                                        <i class="bi bi-layers-fill me-1"></i>{{ t.report_count }} Merged Reports
+                                    </span>
+                                {% endif %}
+                                <span class="badge {% if t.status == 'Resolved' %}bg-success{% elif t.status == 'In Progress' %}bg-primary{% elif t.status == 'Assigned' %}bg-info text-dark{% else %}bg-dark{% endif %}">
+                                    {{ t.status }}
+                                </span>
+                            </div>
+
+                            <p class="fw-medium text-dark mb-2">{{ t.description }}</p>
+
+                            <div class="small text-muted mb-1">
+                                <i class="bi bi-geo-alt-fill me-1 text-navy"></i><strong>{{ t.hostel.name }} — Room {{ t.room.room_number }}</strong>
+                                &bull; Reported by {{ t.student.full_name }} ({{ t.student.register_number }})
+                                &bull; {{ t.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                            </div>
+
+                            <div class="small text-muted mb-2">
+                                <i class="bi bi-cpu me-1"></i><strong>Keywords:</strong> <code>{{ t.matched_keywords }}</code>
+                                &bull; <em>{{ t.triage_reason }}</em>
+                            </div>
+
+                            {% if t.updates %}
+                                <div class="bg-white border rounded p-2 small">
+                                    <div class="fw-semibold text-navy mb-1">
+                                        <i class="bi bi-clock-history me-1"></i>Recent Timeline ({{ t.updates|length }})
+                                    </div>
+                                    {% for u in t.updates[:2] %}
+                                        <div class="text-muted {% if not loop.last %}border-bottom pb-1 mb-1{% endif %}">
+                                            <span class="fw-semibold text-dark">{{ u.updated_by_name }}</span>
+                                            <span class="badge bg-light text-dark border" style="font-size: 0.68rem;">{{ u.status_snapshot }}</span>
+                                            — {{ u.message }}
+                                            <span class="ms-1" style="font-size: 0.72rem;">({{ u.created_at.strftime('%d %b, %I:%M %p') }})</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Live Warden Update Form -->
+                        <div class="col-lg-5">
+                            <form method="POST" action="{{ url_for('admin.update_maintenance', ticket_id=t.id) }}"
+                                  class="bg-white border rounded p-3">
+                                <div class="small fw-bold text-navy mb-2">
+                                    <i class="bi bi-broadcast me-1 text-primary"></i>Post Live Warden Update
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted mb-0">Stage</label>
+                                        <select name="status" class="form-select form-select-sm" required>
+                                            {% for st in ['Reported', 'Assigned', 'In Progress', 'Resolved'] %}
+                                                <option value="{{ st }}" {% if t.status == st %}selected{% endif %}>{{ st }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted mb-0">Assigned Team</label>
+                                        <input type="text" name="assigned_team" class="form-control form-control-sm"
+                                               value="{{ t.assigned_team }}" required>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted mb-0">Update Note for Student</label>
+                                    <textarea name="warden_remark" rows="2" class="form-control form-control-sm"
+                                              placeholder="e.g. Electrician dispatched to Room {{ t.room.room_number }}, ETA 15 mins...">{{ t.warden_remark or '' }}</textarea>
+                                </div>
+                                <button type="submit" class="btn btn-navy btn-sm w-100 fw-semibold">
+                                    <i class="bi bi-send-check me-1"></i>Push Live Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check2-circle fs-1 d-block mb-2"></i>
+            <p class="mb-0">No maintenance complaints match the selected filter.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

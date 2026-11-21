@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} — Hostick{% endblock %}
+{% block page_heading %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="card-clean p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div class="btn-group btn-group-sm" role="group">
+            {% set endpoint = 'student.ticket_history' if is_history else 'student.my_tickets' %}
+            {% for st in ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed'] %}
+                <a href="{{ url_for(endpoint, status=st) }}"
+                   class="btn {% if status_filter == st %}btn-navy{% else %}btn-outline-secondary{% endif %}">
+                    {{ st }}
+                </a>
+            {% endfor %}
+        </div>
+
+        <a href="{{ url_for('student.generate_ticket') }}" class="btn btn-navy btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>New Ticket
+        </a>
+    </div>
+
+    {% if tickets %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Destination &amp; Reason</th>
+                        <th>Departure</th>
+                        <th>Expected Return</th>
+                        <th>Status</th>
+                        <th>Warden Remarks</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-navy">{{ t.ticket_code }}</div>
+                                <small class="text-muted">{{ t.created_at.strftime('%d %b %Y') }}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ t.destination }}</div>
+                                <small class="text-muted">{{ t.reason }}</small>
+                            </td>
+                            <td class="small">{{ t.departure_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td class="small">{{ t.expected_return_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td>
+                                {% if t.status == 'Pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif t.status == 'Approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif t.status == 'Rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% elif t.status == 'Completed' %}
+                                    <span class="badge bg-info text-dark">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if t.status == 'Rejected' and t.rejection_reason %}
+                                    <span class="text-danger">{{ t.rejection_reason }}</span>
+                                {% elif t.reviewer %}
+                                    <span class="text-muted">By {{ t.reviewer.full_name }}</span>
+                                {% else %}
+                                    <span class="text-muted">Awaiting review</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap">
+                                {% if t.status in ('Approved', 'Completed') %}
+                                    <a href="{{ url_for('student.download_ticket_pdf', ticket_id=t.id) }}"
+                                       class="btn btn-sm btn-success">
+                                        <i class="bi bi-download me-1"></i>PDF Pass
+                                    </a>
+                                {% elif t.status == 'Pending' %}
+                                    <form method="POST" action="{{ url_for('student.cancel_ticket', ticket_id=t.id) }}"
+                                          class="d-inline" onsubmit="return confirm('Are you sure you want to cancel ticket {{ t.ticket_code }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x-lg me-1"></i>Cancel
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-muted small">No actions</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            <p class="mb-0">No tickets found for status: <strong>{{ status_filter }}</strong>.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

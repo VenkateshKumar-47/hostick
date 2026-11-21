@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Reports &amp; Analytics — Hostick Admin{% endblock %}
+{% block page_heading %}Reports &amp; Statistics{% endblock %}
+
+{% block content %}
+<!-- Timeframe Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Requests Today</div>
+                <div class="stat-value">{{ summary.today }}</div>
+            </div>
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                <i class="bi bi-calendar-event"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">Last 7 Days</div>
+                <div class="stat-value">{{ summary.this_week }}</div>
+            </div>
+            <div class="stat-icon bg-info bg-opacity-10 text-info">
+                <i class="bi bi-calendar-week"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">This Month</div>
+                <div class="stat-value">{{ summary.this_month }}</div>
+            </div>
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+                <i class="bi bi-calendar-month"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">All-Time Total</div>
+                <div class="stat-value">{{ summary.total }}</div>
+            </div>
+            <div class="stat-icon bg-secondary bg-opacity-10 text-secondary">
+                <i class="bi bi-bar-chart-fill"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Reports Panel -->
+<div class="card-clean p-4 mb-4">
+    <h6 class="fw-bold text-navy mb-3"><i class="bi bi-file-earmark-arrow-down me-2"></i>Export Outing Ticket Reports</h6>
+    <form id="exportForm" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" id="expStartDate" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" id="expEndDate" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Status</label>
+            <select name="status" id="expStatus" class="form-select form-select-sm">
+                {% for st in ['All', 'Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed'] %}
+                    <option value="{{ st }}">{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button type="button" id="btnExportExcel" class="btn btn-success btn-sm flex-fill fw-semibold">
+                <i class="bi bi-file-earmark-excel me-1"></i>Export Excel (.xlsx)
+            </button>
+            <button type="button" id="btnExportPdf" class="btn btn-danger btn-sm flex-fill fw-semibold">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF (.pdf)
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Charts Grid -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3">Daily Ticket Requests (Last 7 Days)</h6>
+            <canvas id="dailyChart" height="120"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3">Approved vs Rejected Breakdown</h6>
+            <canvas id="statusChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3">Weekly &amp; Monthly Trend (Last 6 Months)</h6>
+            <canvas id="monthlyChart" height="150"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card-clean p-4 h-100">
+            <h6 class="fw-bold text-navy mb-3">Department-wise Ticket Statistics</h6>
+            <canvas id="deptChart" height="150"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Student Outing History Table -->
+<div class="card-clean p-4">
+    <h6 class="fw-bold text-navy mb-3">Recent Outing Log (Latest 15 Records)</h6>
+    {% if recent_tickets %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Student</th>
+                        <th>Department</th>
+                        <th>Destination</th>
+                        <th>Departure</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in recent_tickets %}
+                        <tr>
+                            <td class="fw-semibold text-navy">{{ t.ticket_code }}</td>
+                            <td>{{ t.student.full_name }} ({{ t.student.register_number }})</td>
+                            <td class="small">{{ t.student.department }}</td>
+                            <td class="small">{{ t.destination }}</td>
+                            <td class="small">{{ t.departure_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ t.status }}</span></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted small mb-0">No records to display yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<div id="reportsData" class="d-none"
+     data-daily-labels='{{ daily_labels|tojson }}'
+     data-daily-counts='{{ daily_counts|tojson }}'
+     data-monthly-labels='{{ monthly_labels|tojson }}'
+     data-monthly-counts='{{ monthly_counts|tojson }}'
+     data-status-data='{{ status_data|tojson }}'
+     data-dept-labels='{{ dept_labels|tojson }}'
+     data-dept-counts='{{ dept_counts|tojson }}'>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dataEl = document.getElementById("reportsData");
+    const dailyLabels = JSON.parse(dataEl.dataset.dailyLabels);
+    const dailyCounts = JSON.parse(dataEl.dataset.dailyCounts);
+    const monthlyLabels = JSON.parse(dataEl.dataset.monthlyLabels);
+    const monthlyCounts = JSON.parse(dataEl.dataset.monthlyCounts);
+    const statusData = JSON.parse(dataEl.dataset.statusData);
+    const deptLabels = JSON.parse(dataEl.dataset.deptLabels);
+    const deptCounts = JSON.parse(dataEl.dataset.deptCounts);
+
+    // 1. Daily Bar Chart
+    new Chart(document.getElementById("dailyChart"), {
+        type: "bar",
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: "Tickets",
+                data: dailyCounts,
+                backgroundColor: "#1D4ED8",
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // 2. Status Doughnut Chart
+    new Chart(document.getElementById("statusChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Approved / Completed", "Rejected", "Pending", "Cancelled"],
+            datasets: [{
+                data: [
+                    statusData.Approved || 0,
+                    statusData.Rejected || 0,
+                    statusData.Pending || 0,
+                    statusData.Cancelled || 0
+                ],
+                backgroundColor: ["#198754", "#DC3545", "#FFC107", "#6C757D"]
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { position: "bottom" } } }
+    });
+
+    // 3. Monthly Line Chart
+    new Chart(document.getElementById("monthlyChart"), {
+        type: "line",
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: "Monthly Tickets",
+                data: monthlyCounts,
+                borderColor: "#0F2942",
+                backgroundColor: "rgba(15, 41, 66, 0.12)",
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // 4. Department Bar Chart
+    new Chart(document.getElementById("deptChart"), {
+        type: "bar",
+        data: {
+            labels: deptLabels.length ? deptLabels : ["No Data"],
+            datasets: [{
+                label: "Tickets",
+                data: deptCounts.length ? deptCounts : [0],
+                backgroundColor: "#0F2942",
+                borderRadius: 6
+            }]
+        },
+        options: {
+            indexAxis: "y",
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Export Buttons
+    function buildQuery() {
+        const params = new URLSearchParams({
+            start_date: document.getElementById("expStartDate").value,
+            end_date: document.getElementById("expEndDate").value,
+            status: document.getElementById("expStatus").value
+        });
+        return params.toString();
+    }
+
+    document.getElementById("btnExportExcel").addEventListener("click", function () {
+        window.location.href = "{{ url_for('admin.export_excel') }}?" + buildQuery();
+    });
+
+    document.getElementById("btnExportPdf").addEventListener("click", function () {
+        window.location.href = "{{ url_for('admin.export_pdf') }}?" + buildQuery();
+    });
+});
+</script>
+{% endblock %}
